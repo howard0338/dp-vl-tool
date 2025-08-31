@@ -30,7 +30,7 @@ body::before {
 }
 
 .container {
-    max-width: 1400px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
 }
@@ -53,10 +53,7 @@ header p {
 }
 
 .main-content {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-    align-items: start;
+    display: block;
     margin-bottom: 30px;
 }
 
@@ -64,8 +61,10 @@ header p {
 .left-panel {
     background: white;
     border-radius: 15px;
-    padding: 20px;
+    padding: 15px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 100%;
 }
 
 .party-section h2 {
@@ -84,15 +83,17 @@ header p {
 /* Party 横向排列 */
 .party-row {
     display: flex;
-    gap: 20px;
+    gap: 15px;
 }
 
 .party {
     flex: 1;
     border: 2px solid #e2e8f0;
     border-radius: 10px;
-    padding: 15px;
+    padding: 12px;
     background: #f7fafc;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .party h3 {
@@ -110,7 +111,7 @@ header p {
 
 .member-input {
     display: grid;
-    grid-template-columns: 0.7fr 1fr 1fr;
+    grid-template-columns: 1.3fr 0.85fr 0.85fr;
     gap: 8px;
     align-items: center;
 }
@@ -121,6 +122,9 @@ header p {
     border: 1px solid #cbd5e0;
     border-radius: 5px;
     font-size: 0.9rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .member-input div {
@@ -138,6 +142,16 @@ header p {
     outline: none;
     border-color: #4299e1;
     box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.member-input select {
+    white-space: nowrap;
+    overflow: visible;
+}
+
+.member-input select option {
+    white-space: nowrap;
+    overflow: visible;
 }
 
 .remove-member {
@@ -539,9 +553,10 @@ header p {
 
 .grid-container {
     display: flex;
-    gap: 80px;
+    flex-direction: column;
+    gap: 100px;
     align-items: center;
-    min-height: 450px;
+    min-height: 650px;
 }
 
 .left-side, .right-side {
@@ -577,62 +592,87 @@ header p {
 
 .grid-row {
     display: flex;
-    gap: 20px;
+    gap: 12px;
+    justify-content: center;
+}
+
+/* 每5個方格為一組，組間隔開 */
+.grid-row .loot-box:nth-child(5) {
+    margin-right: 25px;
+}
+
+/* 按鈕容器樣式 */
+.button-container {
+    margin-top: 15px;
+    text-align: center;
 }
 
 .loot-box {
-    width: 70px;
-    height: 70px;
-    background: linear-gradient(145deg, #4a5568, #2d3748);
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
+    width: 85px;
+    height: 85px;
+    background: linear-gradient(145deg, #ffd700, #ffed4e);
+    border: 3px solid #daa520;
+    border-radius: 15px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: #8b4513;
     font-weight: bold;
     font-size: 1rem;
     cursor: pointer;
     transition: all 0.3s;
     position: relative;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    box-shadow: 0 6px 12px rgba(218, 165, 32, 0.3);
 }
 
 .loot-box::before {
     content: '🦁';
     position: absolute;
-    top: -5px;
-    left: -5px;
-    font-size: 20px;
-    filter: drop-shadow(2px 2px 2px rgba(0,0,0,0.5));
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5rem;
+    filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
 }
 
 .loot-box:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 16px rgba(218, 165, 32, 0.4);
+    border-color: #b8860b;
 }
 
 .loot-box.assigned {
-    background: linear-gradient(145deg, #48bb78, #38a169);
-    border-color: #68d391;
+    /* 使用CSS變數，允許JavaScript動態覆蓋 */
+    background: var(--loot-box-bg, linear-gradient(145deg, #48bb78, #38a169));
+    border-color: var(--loot-box-border, #68d391);
+    animation: assignedGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes assignedGlow {
+    0% {
+        box-shadow: 0 6px 12px rgba(72, 187, 120, 0.3);
+    }
+    100% {
+        box-shadow: 0 6px 12px rgba(72, 187, 120, 0.6);
+    }
 }
 
 .loot-box.assigned::after {
     content: attr(data-player);
     position: absolute;
-    bottom: -45px;
+    bottom: -60px;
     left: 50%;
     transform: translateX(-50%);
-    background: #805ad5;
+    background: linear-gradient(45deg, #805ad5, #6b46c1);
     color: white;
-    padding: 6px 10px;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: 500;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
     white-space: nowrap;
     z-index: 10;
-    white-space: nowrap;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(128, 90, 213, 0.4);
+    border: 2px solid #a855f7;
 }
 
 .spawn-label {
@@ -647,11 +687,6 @@ header p {
 
 /* 響應式設計 */
 @media (max-width: 1200px) {
-    .main-content {
-        grid-template-columns: 1fr;
-        gap: 15px;
-    }
-    
     .party-row {
         flex-direction: column;
     }
@@ -660,8 +695,7 @@ header p {
         grid-template-columns: repeat(2, 1fr);
     }
     
-    .left-panel,
-    .right-panel {
+    .left-panel {
         max-width: 100%;
     }
 }
@@ -738,5 +772,170 @@ header p {
     }
     100% {
         box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+}
+
+/* Party 4 緊湊樣式 */
+.party4-compact {
+    flex: 0 0 40%; /* 讓 Party 4 佔用較少的空間 */
+    max-width: 40%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.party4-compact .member-input {
+    grid-template-columns: 1.3fr 0.85fr 0.85fr;
+    gap: 6px;
+}
+
+.party4-compact .member-input {
+    font-size: 0.9em;
+}
+
+.party4-compact input,
+.party4-compact select {
+    padding: 6px 8px;
+    font-size: 0.85em;
+}
+
+/* Timer 放大樣式 */
+.timer-expanded {
+    flex: 0 0 60%; /* 讓 timer 佔用更多空間 */
+    max-width: 60%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.timer-expanded .timers-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    padding: 20px;
+}
+
+.timer-expanded .timer-item {
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.timer-expanded .timer-label {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+}
+
+.timer-expanded .timer-display {
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #dc3545;
+    margin: 15px 0;
+    font-family: 'Courier New', monospace;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+.timer-expanded .timer-controls button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1.1em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.timer-expanded .timer-controls button:hover {
+    background: #0056b3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+/* 調整 Party 4 & Timer 區域的佈局 */
+.party-section .party-container .party-row {
+    display: flex;
+    gap: 15px;
+    align-items: flex-start;
+}
+
+/* Party Commands 大對話框樣式 */
+.party-commands-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+#party-commands-display {
+    width: 100%;
+    min-height: 200px;
+    padding: 15px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    background-color: #f8fafc;
+    color: #2d3748;
+    resize: vertical;
+}
+
+#party-commands-display:focus {
+    outline: none;
+    border-color: #4299e1;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+.button-group {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.lucky-btn {
+    background: linear-gradient(45deg, #ed8936, #dd6b20);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.lucky-btn:hover {
+    background: linear-gradient(45deg, #dd6b20, #c05621);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(237, 137, 54, 0.3);
+}
+
+/* Party 4 & Timer 響應式設計 */
+@media (max-width: 1200px) {
+    .party4-compact {
+        flex: 0 0 45%;
+        max-width: 45%;
+    }
+    
+    .timer-expanded {
+        flex: 0 0 55%;
+        max-width: 55%;
+    }
+}
+
+@media (max-width: 768px) {
+    .party-section .party-container .party-row {
+        flex-direction: column;
+    }
+    
+    .party4-compact,
+    .timer-expanded {
+        flex: 1;
+        max-width: 100%;
     }
 }
