@@ -8,6 +8,45 @@ let timers = {
 let lootAssignments = {};
 let bonLooters = [];
 
+// 預定義顏色陣列 - 高對比度、易區分、減少紅色系
+const playerColors = [
+    '#4ECDC4',  // 青綠色
+    '#45B7D1',  // 天藍色
+    '#96CEB4',  // 薄荷綠
+    '#FFEAA7',  // 金黃色
+    '#DDA0DD',  // 紫色
+    '#98D8C8',  // 淺綠
+    '#F7DC6F',  // 檸檬黃
+    '#BB8FCE',  // 薰衣草
+    '#85C1E9',  // 淺藍色
+    '#27AE60',  // 翠綠色
+    '#8E44AD',  // 深紫色
+    '#16A085',  // 深青色
+    '#32CD32',  // 酸橙綠
+    '#FFD700',  // 金色
+    '#9370DB',  // 中紫色
+    '#20B2AA',  // 淺海綠
+    '#00BFFF',  // 深天藍
+    '#8A2BE2',  // 藍紫色
+    '#00FF7F',  // 春綠色
+    '#1E90FF',  // 道奇藍
+    '#9932CC',  // 深蘭花紫
+    '#00FA9A',  // 中春綠
+    '#00CED1',  // 深青藍色
+    '#FF6B6B',  // 鮮紅色（僅作為備用）
+    '#F39C12',  // 橙色（僅作為備用）
+    '#FF8C00',  // 深橙色（僅作為備用）
+    '#FF1493',  // 深粉紅色（僅作為備用）
+    '#FF6347',  // 番茄紅（僅作為備用）
+    '#FF4500',  // 橙紅色（僅作為備用）
+    '#E74C3C',  // 深紅色（僅作為備用）
+    '#D35400',  // 深橙色（僅作為備用）
+    '#C0392B',  // 深棕色（僅作為備用）
+    '#7D3C98',  // 深藍紫色（僅作為備用）
+    '#138D75',  // 深薄荷綠（僅作為備用）
+    '#B7950B'   // 深金黃色（僅作為備用）
+];
+
 // 計時器功能
 function startTimer(timerId, totalSeconds) {
     const timer = timers[timerId];
@@ -74,6 +113,62 @@ function updateTimerDisplay(timerId) {
 
 // 隊伍管理功能 - 固定6個欄位，無需新增/刪除功能
 
+// 玩家顏色管理
+let playerColorMap = new Map(); // 存儲玩家ID對應的顏色
+
+// 獲取玩家的顏色
+function getPlayerColor(playerName) {
+    return playerColorMap.get(playerName);
+}
+
+// 為新玩家分配顏色
+function assignNewPlayerColor(playerName, uniquePlayers) {
+    // 獲取已使用的顏色
+    const usedColors = new Set(playerColorMap.values());
+    
+    // 優先使用預定義顏色
+    for (let i = 0; i < playerColors.length; i++) {
+        const color = playerColors[i];
+        if (!usedColors.has(color)) {
+            playerColorMap.set(playerName, color);
+            return color;
+        }
+    }
+    
+    // 如果預定義顏色不夠，生成新顏色
+    const newColor = generateDistinctColor(usedColors);
+    playerColorMap.set(playerName, newColor);
+    return newColor;
+}
+
+// 生成與現有顏色區別明顯的新顏色
+function generateDistinctColor(usedColors) {
+    if (usedColors.size === 0) {
+        return `hsl(${Math.random() * 360}, 80%, 60%)`;
+    }
+    
+    let bestColor;
+    let bestContrast = 0;
+    
+    // 嘗試多個HSL顏色，選擇與現有顏色對比度最高的
+    for (let i = 0; i < 30; i++) {
+        const testColor = `hsl(${Math.random() * 360}, 80%, 60%)`;
+        let totalContrast = 0;
+        
+        usedColors.forEach(usedColor => {
+            totalContrast += calculateColorContrast(testColor, usedColor);
+        });
+        
+        const avgContrast = totalContrast / usedColors.size;
+        if (avgContrast > bestContrast) {
+            bestContrast = avgContrast;
+            bestColor = testColor;
+        }
+    }
+    
+    return bestColor || `hsl(${Math.random() * 360}, 80%, 60%)`;
+}
+
 // 戰利品分配功能
 function assignLoot(boxId, playerName) {
     lootAssignments[boxId] = playerName;
@@ -82,59 +177,216 @@ function assignLoot(boxId, playerName) {
         box.classList.add('assigned');
         box.setAttribute('data-player', playerName);
         
-        // 為每個玩家分配不同的顏色
-        const playerColors = [
-            '#FF6B6B',  // 紅色
-            '#4ECDC4',  // 青色
-            '#45B7D1',  // 藍色
-            '#96CEB4',  // 綠色
-            '#FFEAA7',  // 黃色
-            '#DDA0DD',  // 紫色
-            '#98D8C8',  // 薄荷綠
-            '#F7DC6F',  // 金黃色
-            '#BB8FCE',  // 薰衣草
-            '#85C1E9',  // 天藍色
-            '#F39C12',  // 橙色
-            '#E74C3C',  // 深紅色
-            '#27AE60',  // 深綠色
-            '#8E44AD',  // 深紫色
-            '#16A085',  // 深青色
-            '#D35400',  // 深橙色
-            '#C0392B',  // 深棕色
-            '#7D3C98',  // 深藍紫色
-            '#138D75',  // 深薄荷綠
-            '#B7950B'   // 深金黃色
-        ];
+        // 基於玩家ID的顏色分配 - 確保同一個玩家所有寶箱使用相同顏色
+        const uniquePlayers = [...new Set(Object.values(lootAssignments))];
+        const playerIndex = uniquePlayers.indexOf(playerName);
         
-        // 根據玩家名稱生成顏色索引
-        let colorIndex = 0;
-        for (let existingPlayer in lootAssignments) {
-            if (lootAssignments[existingPlayer] === playerName) {
-                break;
-            }
-            colorIndex++;
+        // 檢查這個玩家是否已經有分配的顏色
+        let color = getPlayerColor(playerName);
+        
+        if (!color) {
+            // 如果玩家還沒有顏色，為其分配一個新顏色
+            color = assignNewPlayerColor(playerName, uniquePlayers);
         }
-        
-        // 設置寶箱的顏色樣式
-        const color = playerColors[colorIndex % playerColors.length] || `hsl(${colorIndex * 137.5 % 360}, 70%, 60%)`;
         
         // 設置背景色（包含獅子後方的背景填充）
         box.style.backgroundColor = color;
         box.style.borderColor = color;
-        box.style.borderWidth = '4px';  // 更粗的邊框
+        box.style.borderWidth = '6px';  // 更粗的邊框
         box.style.color = '#ffffff';
-        box.style.boxShadow = `0 0 10px ${color}`;  // 添加發光效果
+        box.style.boxShadow = `0 8px 20px rgba(0, 0, 0, 0.4), 0 0 30px ${color}`;  // 添加發光效果
         
         // 覆蓋原本的綠色背景，確保顏色完全填充
         box.style.setProperty('--loot-box-bg', color);
         box.style.setProperty('--loot-box-border', color);
         
+        // 調試信息
+        console.log(`🎨 Chest ${boxId} assigned to ${playerName}, color: ${color}`);
+        console.log(`📦 Chest styles:`, {
+            backgroundColor: box.style.backgroundColor,
+            borderColor: box.style.borderColor,
+            borderWidth: box.style.borderWidth,
+            boxShadow: box.style.boxShadow,
+            cssVarBg: box.style.getPropertyValue('--loot-box-bg'),
+            cssVarBorder: box.style.getPropertyValue('--loot-box-border')
+        });
+        
+        // 添加顏色標籤
+        let colorLabel = box.querySelector('.color-label');
+        if (!colorLabel) {
+            colorLabel = document.createElement('div');
+            colorLabel.className = 'color-label';
+            box.appendChild(colorLabel);
+        }
+        colorLabel.textContent = playerName;
+        colorLabel.style.borderColor = color;
+        
         // 使用CSS ::after伪元素显示玩家名称，不需要JavaScript创建元素
     }
 }
 
+// 更新遠征隊總覽統計
+function updateExpeditionSummary() {
+    let totalMembers = 0;
+    let totalBucc = 0;
+    let totalShad = 0;
+    let totalBs = 0;
+    let totalTrainee = 0;
+    
+    // 遍歷所有隊伍的成員
+    ['party1', 'party2', 'party3', 'party4'].forEach(partyId => {
+        const party = document.getElementById(partyId);
+        if (party) {
+            party.querySelectorAll('.member-input').forEach(member => {
+                const nameInput = member.querySelector('.player-name');
+                const jobSelect = member.querySelector('.job-select');
+                const lootSelect = member.querySelector('.loot-select');
+                
+                if (nameInput && nameInput.value.trim()) {
+                    totalMembers++;
+                    
+                    // 統計職業數量
+                    if (jobSelect && jobSelect.value) {
+                        switch (jobSelect.value) {
+                            case 'BUCC':
+                                totalBucc++;
+                                break;
+                            case 'SHAD':
+                                totalShad++;
+                                break;
+                            case 'BS':
+                                totalBs++;
+                                break;
+                        }
+                    }
+                    
+                    // 統計實習生數量
+                    if (lootSelect && lootSelect.value === 'trainee') {
+                        totalTrainee++;
+                    }
+                }
+            });
+        }
+    });
+    
+    // 更新顯示並添加動畫效果
+    updateStatWithAnimation('total-members', totalMembers);
+    updateStatWithAnimation('total-bucc', totalBucc);
+    updateStatWithAnimation('total-shad', totalShad);
+    updateStatWithAnimation('total-bs', totalBs);
+    updateStatWithAnimation('total-trainee', totalTrainee);
+    
+    console.log('📊 Expedition summary updated:', {
+        totalMembers,
+        totalBucc,
+        totalShad,
+        totalBs,
+        totalTrainee
+    });
+}
+
+// 顯示保存成功提示
+function showSaveNotification() {
+    // 創建提示元素
+    const notification = document.createElement('div');
+    notification.textContent = '✅ Data saved successfully!';
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #38a169;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: bold;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        animation: slideDown 0.3s ease-out;
+    `;
+    
+    // 添加動畫樣式
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideDown {
+            from {
+                transform: translateX(-50%) translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(-50%) translateY(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(notification);
+    
+    // 3秒後自動移除
+    setTimeout(() => {
+        notification.style.animation = 'slideDown 0.3s ease-out reverse';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 2000);
+}
+
+// 帶動畫效果的統計更新
+function updateStatWithAnimation(elementId, newValue) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    const currentValue = parseInt(element.textContent) || 0;
+    const targetValue = newValue;
+    
+    // 如果值沒有變化，不需要動畫
+    if (currentValue === targetValue) return;
+    
+    // 添加更新動畫類
+    element.classList.add('updating');
+    
+    // 更新數值
+    element.textContent = targetValue;
+    
+    // 移除動畫類
+    setTimeout(() => {
+        element.classList.remove('updating');
+    }, 500);
+}
+
+// 計算兩個顏色的對比度
+function calculateColorContrast(color1, color2) {
+    // 將顏色轉換為RGB值
+    const rgb1 = hexToRgb(color1);
+    const rgb2 = hexToRgb(color2);
+    
+    if (!rgb1 || !rgb2) return 0;
+    
+    // 計算歐幾里得距離作為對比度
+    const deltaR = rgb1.r - rgb2.r;
+    const deltaG = rgb1.g - rgb2.g;
+    const deltaB = rgb1.b - rgb2.b;
+    
+    return Math.sqrt(deltaR * deltaR + deltaG * deltaG + deltaB * deltaB);
+}
+
+// 將十六進制顏色轉換為RGB
+function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
+
 function clearLoot(boxId) {
+    const playerName = lootAssignments[boxId];
     delete lootAssignments[boxId];
+    
     const box = document.querySelector(`[data-box="${boxId}"]`);
     if (box) {
         box.classList.remove('assigned');
@@ -149,7 +401,21 @@ function clearLoot(boxId) {
         box.style.removeProperty('--loot-box-bg');
         box.style.removeProperty('--loot-box-border');
         
-        // 不需要移除JavaScript创建的元素，因为现在使用CSS伪元素
+        // 強制重新計算樣式
+        box.style.setProperty('--loot-box-bg', '');
+        box.style.setProperty('--loot-box-border', '');
+        
+        // 移除顏色標籤
+        const colorLabel = box.querySelector('.color-label');
+        if (colorLabel) {
+            colorLabel.remove();
+        }
+    }
+    
+    // 檢查這個玩家是否還有其他寶箱，如果沒有則清除其顏色映射
+    if (playerName && !Object.values(lootAssignments).includes(playerName)) {
+        playerColorMap.delete(playerName);
+        console.log(`🗑️ 玩家 ${playerName} 的所有寶箱已清除，顏色映射已移除`);
     }
 }
 
@@ -173,18 +439,33 @@ function getEligibleBonPlayers() {
             const name = nameInput.value.trim();
             const loot = lootSelect && lootSelect.tagName === 'SELECT' ? lootSelect.value : '';
             
-            // Exclude trainees and belt players
-            if (loot !== 'trainee' && loot !== 'BELT') {
+            // 只有同時填寫ID且選擇BON的玩家才參與分配
+            if (loot === 'BON') {
                 eligiblePlayers.push(name);
             } else {
-                excludedPlayers.push({ name, loot });
+                excludedPlayers.push({ name, loot: loot || '空白' });
             }
         }
     });
     
     // 输出调试信息
-    console.log('参与宝箱分配的玩家:', eligiblePlayers);
-    console.log('被排除的玩家:', excludedPlayers);
+    console.log('🎯 寶箱分配篩選結果:');
+    console.log('✅ 參與分配的玩家:', eligiblePlayers);
+    console.log('❌ 被排除的玩家:', excludedPlayers);
+    console.log('📊 總計:', eligiblePlayers.length + excludedPlayers.length, '人');
+    
+    // 詳細檢查每個玩家的狀態
+    document.querySelectorAll('.member-input').forEach((member, index) => {
+        const nameInput = member.querySelector('.player-name');
+        const lootSelect = member.querySelector('.loot-select');
+        
+        if (nameInput && lootSelect) {
+            const name = nameInput.value.trim();
+            const loot = lootSelect.value;
+            const status = loot === 'BON' ? '✅ 參與' : loot === '' ? '❌ 空白' : `❌ ${loot}`;
+            console.log(`玩家${index + 1}: ${name || '未填寫'} | Reward: ${loot || '空白'} | ${status}`);
+        }
+    });
     
     return eligiblePlayers;
 }
@@ -729,29 +1010,7 @@ function pickLuckyWinner() {
         tempPlayers.splice(randomIndex, 1);
     }
     
-    // 获取玩家颜色数组（与宝箱分配系统保持一致）
-    const playerColors = [
-        '#FF6B6B',  // 紅色
-        '#4ECDC4',  // 青色
-        '#45B7D1',  // 藍色
-        '#96CEB4',  // 綠色
-        '#FFEAA7',  // 黃色
-        '#DDA0DD',  // 紫色
-        '#98D8C8',  // 薄荷綠
-        '#F7DC6F',  // 金黃色
-        '#BB8FCE',  // 薰衣草
-        '#85C1E9',  // 天藍色
-        '#F39C12',  // 橙色
-        '#E74C3C',  // 深紅色
-        '#27AE60',  // 深綠色
-        '#8E44AD',  // 深紫色
-        '#16A085',  // 深青色
-        '#D35400',  // 深橙色
-        '#C0392B',  // 深棕色
-        '#7D3C98',  // 深藍紫色
-        '#138D75',  // 深薄荷綠
-        '#B7950B'   // 深金黃色
-    ];
+    // 使用全局的playerColors陣列（與寶箱分配系統保持一致）
     
     // Create popup notification
     const notification = document.createElement('div');
@@ -884,22 +1143,22 @@ function generatePartyCommand() {
     let commandsDisplay = '';
     
     if (party1Players.length > 0) {
-        commandsDisplay += `Party 1 Leader: ${party1Players.slice(0, 2).join(' ')}\n`;
+        commandsDisplay += `**Party 1 Leader: ${party1Players.slice(0, 2).join(' ')}**\n`;
         commandsDisplay += `${party1Command}\n\n`;
     }
     
     if (party2Players.length > 0) {
-        commandsDisplay += `Party 2 Leader: ${party2Players.slice(0, 2).join(' ')}\n`;
+        commandsDisplay += `**Party 2 Leader: ${party2Players.slice(0, 2).join(' ')}**\n`;
         commandsDisplay += `${party2Command}\n\n`;
     }
     
     if (party3Players.length > 0) {
-        commandsDisplay += `Party 3 Leader: ${party3Players.slice(0, 2).join(' ')}\n`;
+        commandsDisplay += `**Party 3 Leader: ${party3Players.slice(0, 2).join(' ')}**\n`;
         commandsDisplay += `${party3Command}\n\n`;
     }
     
     if (party4Players.length > 0) {
-        commandsDisplay += `Party 4 Leader: ${party4Players.slice(0, 2).join(' ')}\n`;
+        commandsDisplay += `**Party 4 Leader: ${party4Players.slice(0, 2).join(' ')}**\n`;
         commandsDisplay += `${party4Command}\n\n`;
     }
     
@@ -952,6 +1211,12 @@ function saveData() {
     data.timers = timers;
     
     localStorage.setItem('gameToolData', JSON.stringify(data));
+    
+    // 更新遠征隊統計
+    updateExpeditionSummary();
+    
+    // 顯示保存成功提示
+    showSaveNotification();
 }
 
 function loadData() {
@@ -1003,6 +1268,8 @@ function loadData() {
             });
         }
         
+        // 更新遠征隊統計
+        updateExpeditionSummary();
     }
 }
 
@@ -1044,7 +1311,26 @@ function clearAllFields() {
     document.querySelectorAll('.loot-box').forEach(box => {
         box.classList.remove('assigned');
         box.removeAttribute('data-player');
+        
+        // 清除顏色樣式
+        box.style.backgroundColor = '';
+        box.style.borderColor = '';
+        box.style.color = '';
+        box.style.borderWidth = '';
+        box.style.boxShadow = '';
+        box.style.removeProperty('--loot-box-bg');
+        box.style.removeProperty('--loot-box-border');
+        
+        // 移除顏色標籤
+        const colorLabel = box.querySelector('.color-label');
+        if (colorLabel) {
+            colorLabel.remove();
+        }
     });
+    
+    // 清空玩家顏色映射
+    playerColorMap.clear();
+    console.log('🗑️ 所有玩家顏色映射已清除');
     
     // 重置計時器到初始狀態
     Object.keys(timers).forEach(timerId => {
@@ -1060,6 +1346,9 @@ function clearAllFields() {
     
     // 清空本地存儲
     localStorage.removeItem('gameToolData');
+    
+    // 更新遠征隊統計
+    updateExpeditionSummary();
 }
 
 function exportData() {
@@ -1100,8 +1389,15 @@ function exportData() {
 
 // 事件監聽器
 document.addEventListener('DOMContentLoaded', function() {
-    // 初始化 - 清空所有欄位
-    clearAllFields();
+    // 初始化 - 先嘗試加載保存的數據，如果沒有則清空所有欄位
+    const savedData = localStorage.getItem('gameToolData');
+    if (savedData) {
+        console.log('🔄 Found saved data, restoring...');
+        loadData();
+    } else {
+        console.log('🆕 No saved data found, initializing new page...');
+        clearAllFields();
+    }
     
     // 確保所有玩家名稱輸入框能夠接受所有字符（包括數字）
     document.querySelectorAll('.player-name').forEach(input => {
@@ -1131,14 +1427,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // 監聽輸入變化
+    // 監聽輸入變化 - 只更新遠征隊統計，不自動保存
     document.addEventListener('input', function(e) {
         if (e.target.classList.contains('player-name') || 
             e.target.classList.contains('loot-select') ||
             e.target.classList.contains('job-select')) {
-            saveData();
+            // 只更新遠征隊統計，不自動保存
+            updateExpeditionSummary();
         }
     });
+    
+    // 初始化遠征隊統計
+    updateExpeditionSummary();
     
     // Create save/load buttons
     const saveLoadDiv = document.createElement('div');
@@ -1152,7 +1452,8 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
     
     const saveButton = document.createElement('button');
-    saveButton.textContent = '保存';
+    saveButton.textContent = '💾 Save';
+    saveButton.title = 'Save all data to browser local storage';
     saveButton.onclick = saveData;
     saveButton.style.cssText = `
         background: #4299e1;
@@ -1164,21 +1465,9 @@ document.addEventListener('DOMContentLoaded', function() {
         font-weight: bold;
     `;
     
-    const exportButton = document.createElement('button');
-    exportButton.textContent = '匯出';
-    exportButton.onclick = exportData;
-    exportButton.style.cssText = `
-        background: #38a169;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-weight: bold;
-    `;
-    
     const clearButton = document.createElement('button');
-            clearButton.textContent = 'Clear';
+    clearButton.textContent = '🗑️ Clear';
+    clearButton.title = 'Clear all data';
     clearButton.onclick = clearAllFields;
     clearButton.style.cssText = `
         background: #e53e3e;
@@ -1191,7 +1480,6 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
     
     saveLoadDiv.appendChild(saveButton);
-    saveLoadDiv.appendChild(exportButton);
     saveLoadDiv.appendChild(clearButton);
     document.body.appendChild(saveLoadDiv);
 });
@@ -1232,4 +1520,211 @@ document.addEventListener('keydown', function(e) {
             }
         });
     }
+});
+
+// 拖拽功能
+let draggedElement = null;
+let draggedBoxId = null;
+let draggedPlayer = null;
+let dragPath = []; // 記錄拖拽路徑
+
+// 初始化拖拽功能
+function initializeDragAndDrop() {
+    const lootBoxes = document.querySelectorAll('.loot-box');
+    
+    lootBoxes.forEach(box => {
+        // 拖拽開始
+        box.addEventListener('dragstart', function(e) {
+            draggedElement = this;
+            draggedBoxId = this.getAttribute('data-box');
+            draggedPlayer = lootAssignments[draggedBoxId] || null;
+            dragPath = [draggedBoxId]; // 初始化拖拽路徑
+            
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.outerHTML);
+            
+            console.log(`🚀 開始拖拽: ${draggedBoxId}, 玩家: ${draggedPlayer}`);
+        });
+        
+        // 拖拽結束
+        box.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+            
+            // 清除所有拖拽相關樣式
+            document.querySelectorAll('.loot-box').forEach(b => {
+                b.classList.remove('drag-over', 'drag-path', 'drag-target');
+            });
+            
+            // 清除拖拽路徑
+            dragPath = [];
+            
+            draggedElement = null;
+            draggedBoxId = null;
+            draggedPlayer = null;
+            
+            console.log('🏁 拖拽結束');
+        });
+        
+        // 拖拽進入目標
+        box.addEventListener('dragenter', function(e) {
+            e.preventDefault();
+            if (this !== draggedElement) {
+                const currentBoxId = this.getAttribute('data-box');
+                
+                // 添加到拖拽路徑
+                if (!dragPath.includes(currentBoxId)) {
+                    dragPath.push(currentBoxId);
+                    console.log(`📍 拖拽路徑: ${dragPath.join(' → ')}`);
+                }
+                
+                // 設置視覺效果
+                this.classList.add('drag-over');
+                
+                // 如果是目標位置，添加特殊樣式
+                if (dragPath.length > 1) {
+                    this.classList.add('drag-target');
+                }
+            }
+        });
+        
+        // 拖拽在目標上方
+        box.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            
+            // 持續更新拖拽路徑的視覺效果
+            if (this !== draggedElement) {
+                const currentBoxId = this.getAttribute('data-box');
+                if (!dragPath.includes(currentBoxId)) {
+                    dragPath.push(currentBoxId);
+                    this.classList.add('drag-path');
+                }
+            }
+        });
+        
+        // 拖拽離開目標
+        box.addEventListener('dragleave', function(e) {
+            // 只有當真正離開元素時才移除樣式
+            if (!this.contains(e.relatedTarget)) {
+                this.classList.remove('drag-over', 'drag-target');
+                
+                // 延遲移除路徑樣式，創造流暢的視覺效果
+                setTimeout(() => {
+                    if (!this.classList.contains('drag-over')) {
+                        this.classList.remove('drag-path');
+                    }
+                }, 100);
+            }
+        });
+        
+        // 放置
+        box.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over', 'drag-target', 'drag-path');
+            
+            if (this !== draggedElement && draggedBoxId) {
+                const targetBoxId = this.getAttribute('data-box');
+                const targetPlayer = lootAssignments[targetBoxId] || null;
+                
+                console.log(`🎯 放置: ${draggedBoxId} → ${targetBoxId}`);
+                console.log(`🔄 交換玩家: ${draggedPlayer} <-> ${targetPlayer}`);
+                console.log(`🛤️ 拖拽路徑: ${dragPath.join(' → ')}`);
+                
+                // 執行交換
+                swapLootAssignments(draggedBoxId, targetBoxId, draggedPlayer, targetPlayer);
+            }
+        });
+    });
+}
+
+// 交換寶箱分配
+function swapLootAssignments(boxId1, boxId2, player1, player2) {
+    try {
+        // 保存原有的視覺樣式
+        const box1 = document.querySelector(`[data-box="${boxId1}"]`);
+        const box2 = document.querySelector(`[data-box="${boxId2}"]`);
+        
+        if (!box1 || !box2) {
+            console.error('❌ 找不到寶箱元素');
+            return;
+        }
+        
+        // 保存原有的樣式信息
+        const box1Styles = {
+            backgroundColor: box1.style.backgroundColor,
+            borderColor: box1.style.borderColor,
+            borderWidth: box1.style.borderWidth,
+            color: box1.style.color,
+            boxShadow: box1.style.boxShadow,
+            hasPlayer: box1.classList.contains('assigned'),
+            playerName: box1.getAttribute('data-player')
+        };
+        
+        const box2Styles = {
+            backgroundColor: box2.style.backgroundColor,
+            borderColor: box2.style.borderColor,
+            borderWidth: box2.style.borderWidth,
+            color: box2.style.color,
+            boxShadow: box2.style.boxShadow,
+            hasPlayer: box2.classList.contains('assigned'),
+            playerName: box2.getAttribute('data-player')
+        };
+        
+        // 清除原有分配
+        if (player1) {
+            clearLoot(boxId1);
+        }
+        if (player2) {
+            clearLoot(boxId2);
+        }
+        
+        // 應用新分配（保持原有顏色）
+        if (player1) {
+            // 將player1分配到boxId2，但保持player1原本的顏色
+            assignLootWithColor(boxId2, player1, box1Styles.backgroundColor, box1Styles.borderColor);
+        }
+        if (player2) {
+            // 將player2分配到boxId1，但保持player2原本的顏色
+            assignLootWithColor(boxId1, player2, box2Styles.backgroundColor, box2Styles.borderColor);
+        }
+        
+        console.log(`✅ 交換完成: ${boxId1}(${player2 || '空'}) <-> ${boxId2}(${player1 || '空'})`);
+        console.log(`🎨 顏色保持: ${player1}保持原色, ${player2}保持原色`);
+        
+        // 不自動保存，用戶需要手動點擊Save按鈕
+        
+    } catch (error) {
+        console.error('❌ 交換寶箱分配時出錯:', error);
+        alert('交換失敗，請重試');
+    }
+}
+
+// 帶顏色的寶箱分配函數
+function assignLootWithColor(boxId, playerName, backgroundColor, borderColor) {
+    lootAssignments[boxId] = playerName;
+    const box = document.querySelector(`[data-box="${boxId}"]`);
+    if (box) {
+        box.classList.add('assigned');
+        box.setAttribute('data-player', playerName);
+        
+        // 使用指定的顏色
+        if (backgroundColor) {
+            box.style.backgroundColor = backgroundColor;
+            box.style.borderColor = borderColor || backgroundColor;
+            box.style.borderWidth = '4px';
+            box.style.color = '#ffffff';
+            box.style.boxShadow = `0 0 10px ${backgroundColor}`;
+            
+            // 設置CSS變數
+            box.style.setProperty('--loot-box-bg', backgroundColor);
+            box.style.setProperty('--loot-box-border', borderColor || backgroundColor);
+        }
+    }
+}
+
+// 在頁面載入時初始化拖拽功能
+document.addEventListener('DOMContentLoaded', function() {
+    // 延遲初始化，確保所有元素都已載入
+    setTimeout(initializeDragAndDrop, 100);
 });

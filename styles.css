@@ -596,9 +596,14 @@ header p {
     justify-content: center;
 }
 
-/* 每5個方格為一組，組間隔開 */
+/* 每5個方格為一組，組間隔開 - 增加間距為原本的三倍 */
 .grid-row .loot-box:nth-child(5) {
-    margin-right: 25px;
+    margin-right: 75px; /* 原本25px的三倍 */
+}
+
+/* 為E5寶箱也添加間距，與F1分開 */
+.grid-row .loot-box:nth-child(10) {
+    margin-right: 75px; /* 與A5、C5保持一致的間距 */
 }
 
 /* 按鈕容器樣式 */
@@ -619,10 +624,11 @@ header p {
     color: #8b4513;
     font-weight: bold;
     font-size: 1rem;
-    cursor: pointer;
+    cursor: grab;
     transition: all 0.3s;
     position: relative;
     box-shadow: 0 6px 12px rgba(218, 165, 32, 0.3);
+    user-select: none;
 }
 
 .loot-box::before {
@@ -641,19 +647,32 @@ header p {
     border-color: #b8860b;
 }
 
+/* 已分配寶箱的懸停效果 */
+.loot-box.assigned:hover {
+    transform: translateY(-5px) scale(1.08);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 50px currentColor;
+    z-index: 20;
+}
+
 .loot-box.assigned {
     /* 使用CSS變數，允許JavaScript動態覆蓋 */
-    background: var(--loot-box-bg, linear-gradient(145deg, #48bb78, #38a169));
-    border-color: var(--loot-box-border, #68d391);
+    background: var(--loot-box-bg, linear-gradient(145deg, #48bb78, #38a169)) !important;
+    border-color: var(--loot-box-border, #68d391) !important;
+    border-width: 6px !important;
     animation: assignedGlow 2s ease-in-out infinite alternate;
+    position: relative;
+    overflow: visible;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 30px var(--loot-box-border, currentColor) !important;
+    transform: scale(1.02);
+    z-index: 10;
 }
 
 @keyframes assignedGlow {
     0% {
-        box-shadow: 0 6px 12px rgba(72, 187, 120, 0.3);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 30px var(--loot-box-border, currentColor);
     }
     100% {
-        box-shadow: 0 6px 12px rgba(72, 187, 120, 0.6);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6), 0 0 40px var(--loot-box-border, currentColor);
     }
 }
 
@@ -673,6 +692,30 @@ header p {
     z-index: 10;
     box-shadow: 0 4px 12px rgba(128, 90, 213, 0.4);
     border: 2px solid #a855f7;
+}
+
+/* 顏色標籤樣式 */
+.loot-box.assigned .color-label {
+    position: absolute;
+    top: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 25;
+    border: 1px solid currentColor;
+}
+
+.loot-box.assigned:hover .color-label {
+    opacity: 1;
 }
 
 .spawn-label {
@@ -864,6 +907,121 @@ header p {
     align-items: flex-start;
 }
 
+/* 遠征隊總覽樣式 */
+.expedition-summary-section {
+    background: white;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    margin: 20px 0;
+    border: 1px solid #e2e8f0;
+}
+
+.expedition-summary-section h3 {
+    color: #2d3748;
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 10px;
+}
+
+.expedition-summary-section .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 15px;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .expedition-summary-section .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .expedition-summary-section .summary-item {
+        padding: 12px 8px;
+    }
+    
+    .expedition-summary-section .summary-item span {
+        font-size: 1.2rem;
+    }
+}
+
+.expedition-summary-section .summary-item {
+    text-align: center;
+    padding: 15px 10px;
+    background: #f7fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.3s ease;
+}
+
+.expedition-summary-section .summary-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    background: #edf2f7;
+}
+
+.expedition-summary-section .summary-item label {
+    display: block;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.expedition-summary-section .summary-item span {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #2d3748;
+    font-family: 'Courier New', monospace;
+    transition: all 0.3s ease;
+}
+
+/* 數字更新動畫 */
+.expedition-summary-section .summary-item span.updating {
+    animation: numberUpdate 0.5s ease-in-out;
+}
+
+@keyframes numberUpdate {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 為不同類型的統計添加顏色 */
+.expedition-summary-section .summary-item:nth-child(1) span {
+    color: #2b6cb0; /* 總人數 - 藍色 */
+}
+
+.expedition-summary-section .summary-item:nth-child(2) span {
+    color: #d69e2e; /* TL - 金色 */
+}
+
+.expedition-summary-section .summary-item:nth-child(3) span {
+    color: #805ad5; /* SS - 紫色 */
+}
+
+.expedition-summary-section .summary-item:nth-child(4) span {
+    color: #38a169; /* Res - 綠色 */
+}
+
+.expedition-summary-section .summary-item:nth-child(5) span {
+    color: #e53e3e; /* Trainee - 紅色 */
+}
+
 /* Party Commands 大對話框樣式 */
 .party-commands-container {
     display: flex;
@@ -938,4 +1096,231 @@ header p {
         flex: 1;
         max-width: 100%;
     }
+}
+
+/* 顏色預覽功能 */
+.color-preview {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    display: none;
+    max-width: 400px;
+    text-align: center;
+}
+
+.color-preview.show {
+    display: block;
+    animation: previewFadeIn 0.3s ease-out;
+}
+
+@keyframes previewFadeIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
+}
+
+.color-preview h3 {
+    color: white;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+}
+
+.color-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.color-item {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 3px solid white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.color-item:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 20px currentColor;
+}
+
+.color-item.selected {
+    border-color: #FFD700;
+    box-shadow: 0 0 25px currentColor;
+}
+
+.color-item.selected::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 1.2rem;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* 寶箱顏色增強 */
+.loot-box.assigned {
+    position: relative;
+    overflow: visible;
+}
+
+.loot-box.assigned .color-indicator {
+    position: absolute;
+    top: -15px;
+    left: -15px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: currentColor;
+    border: 4px solid white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    z-index: 20;
+    animation: colorPulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes colorPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+    }
+    100% {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+    }
+}
+
+/* 寶箱懸停時的顏色增強 */
+.loot-box.assigned:hover .color-indicator {
+    animation: colorPulseHover 0.5s ease-in-out infinite alternate;
+}
+
+@keyframes colorPulseHover {
+    0% {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+    }
+    100% {
+        transform: scale(1.3);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8);
+    }
+}
+
+/* 拖拽相關樣式 */
+.loot-box:active {
+    cursor: grabbing;
+}
+
+.loot-box.dragging {
+    opacity: 0.7;
+    transform: scale(1.1);
+    z-index: 1000;
+    box-shadow: 0 10px 20px rgba(218, 165, 32, 0.5);
+}
+
+.loot-box.drag-over {
+    border-color: #ff6b6b;
+    border-width: 4px;
+    background: linear-gradient(145deg, #ffed4e, #ffb347, #ff8c00);
+    transform: scale(1.05);
+}
+
+/* 拖拽路徑樣式 - 沿途經過的方塊 */
+.loot-box.drag-path {
+    border-color: #4ecdc4;
+    border-width: 3px;
+    background: linear-gradient(145deg, #4ecdc4, #45b7d1);
+    transform: scale(1.02);
+    box-shadow: 0 0 15px rgba(78, 205, 196, 0.6);
+    animation: pathPulse 1s ease-in-out infinite alternate;
+}
+
+/* 拖拽目標樣式 - 最終放置位置 */
+.loot-box.drag-target {
+    border-color: #ff6b6b;
+    border-width: 5px;
+    background: linear-gradient(145deg, #ff6b6b, #ee5a24);
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.8);
+    animation: targetPulse 0.8s ease-in-out infinite alternate;
+}
+
+/* 路徑脈衝動畫 */
+@keyframes pathPulse {
+    0% {
+        box-shadow: 0 0 15px rgba(78, 205, 196, 0.6);
+        transform: scale(1.02);
+    }
+    100% {
+        box-shadow: 0 0 25px rgba(78, 205, 196, 0.8);
+        transform: scale(1.03);
+    }
+}
+
+/* 目標脈衝動畫 */
+@keyframes targetPulse {
+    0% {
+        box-shadow: 0 0 20px rgba(255, 107, 107, 0.8);
+        transform: scale(1.1);
+    }
+    100% {
+        box-shadow: 0 0 30px rgba(255, 107, 107, 1);
+        transform: scale(1.15);
+    }
+}
+
+/* 已分配寶箱的懸停效果 */
+.loot-box.assigned:hover {
+    transform: translateY(-5px) scale(1.08);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), 0 0 40px currentColor;
+    z-index: 20;
+}
+
+/* 寶箱顏色增強 */
+.loot-box.assigned {
+    position: relative;
+    overflow: visible;
+    border-width: 5px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), 0 0 25px currentColor;
+}
+
+/* 作者資訊 */
+.author-info {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.author-info:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
