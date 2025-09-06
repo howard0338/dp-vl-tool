@@ -431,7 +431,9 @@ function getEligibleBonPlayers() {
     const eligiblePlayers = [];
     const excludedPlayers = [];
     
-    document.querySelectorAll('.member-input').forEach(member => {
+    console.log('🔍 開始檢查玩家資格...');
+    
+    document.querySelectorAll('.member-input').forEach((member, index) => {
         const nameInput = member.querySelector('.player-name');
         const lootSelect = member.querySelector('.loot-select');
         
@@ -439,12 +441,18 @@ function getEligibleBonPlayers() {
             const name = nameInput.value.trim();
             const loot = lootSelect && lootSelect.tagName === 'SELECT' ? lootSelect.value : '';
             
+            console.log(`玩家${index + 1}: ${name} | Reward: ${loot || '空白'}`);
+            
             // 只有同時填寫ID且選擇BON的玩家才參與分配
             if (loot === 'BON') {
                 eligiblePlayers.push(name);
+                console.log(`  ✅ ${name} 符合條件，加入分配名單`);
             } else {
                 excludedPlayers.push({ name, loot: loot || '空白' });
+                console.log(`  ❌ ${name} 不符合條件，原因: ${loot || '空白'}`);
             }
+        } else {
+            console.log(`玩家${index + 1}: 未填寫或不是輸入框`);
         }
     });
     
@@ -454,113 +462,66 @@ function getEligibleBonPlayers() {
     console.log('❌ 被排除的玩家:', excludedPlayers);
     console.log('📊 總計:', eligiblePlayers.length + excludedPlayers.length, '人');
     
-    // 詳細檢查每個玩家的狀態
-    document.querySelectorAll('.member-input').forEach((member, index) => {
-        const nameInput = member.querySelector('.player-name');
-        const lootSelect = member.querySelector('.loot-select');
-        
-        if (nameInput && lootSelect) {
-            const name = nameInput.value.trim();
-            const loot = lootSelect.value;
-            const status = loot === 'BON' ? '✅ 參與' : loot === '' ? '❌ 空白' : `❌ ${loot}`;
-            console.log(`玩家${index + 1}: ${name || '未填寫'} | Reward: ${loot || '空白'} | ${status}`);
-        }
-    });
-    
     return eligiblePlayers;
 }
 
-// 判斷兩個寶箱是否相鄰的函數
+// 判斷兩個寶箱是否相鄰的函數（使用新的配置規則）
 function isAdjacentBoxes(box1, box2) {
-    // 水平相鄰
-    if (box1[0] === box2[0]) { // 同一列
-        const num1 = parseInt(box1[1]);
-        const num2 = parseInt(box2[1]);
-        return Math.abs(num1 - num2) === 1;
+    const config = treasureAllocationConfig;
+    
+    // 檢查是否為特殊連接
+    const isSpecialConnection = config.rules.connections.special.some(pair => 
+        (pair[0] === box1 && pair[1] === box2) || (pair[0] === box2 && pair[1] === box1)
+    );
+    
+    if (isSpecialConnection) {
+        return true;
     }
     
-    // 允許的垂直相鄰
-    // 左側垂直相鄰
-    if ((box1 === 'A5' && box2 === 'C5') || (box1 === 'C5' && box2 === 'A5')) return true;
-    if ((box1 === 'C5' && box2 === 'E5') || (box1 === 'E5' && box2 === 'C5')) return true;
-    if ((box1 === 'A4' && box2 === 'C4') || (box1 === 'C4' && box2 === 'A4')) return true;
-    if ((box1 === 'C4' && box2 === 'E4') || (box1 === 'E4' && box2 === 'C4')) return true;
-    
-    // 右側垂直相鄰
-    if ((box1 === 'B1' && box2 === 'D1') || (box1 === 'D1' && box2 === 'B1')) return true;
-    if ((box1 === 'D1' && box2 === 'F1') || (box1 === 'F1' && box2 === 'D1')) return true;
-    if ((box1 === 'B2' && box2 === 'D2') || (box1 === 'D2' && box2 === 'B2')) return true;
-    if ((box1 === 'D2' && box2 === 'F2') || (box1 === 'F2' && box2 === 'D2')) return true;
-    
-    return false;
-}
-
-// 計算兩個寶箱之間的間隔距離
-function calculateGap(box1, box2) {
     const row1 = box1.charCodeAt(0) - 65; // A=0, B=1, C=2, D=3, E=4, F=5
     const col1 = parseInt(box1[1]) - 1;   // 1=0, 2=1, 3=2, 4=3, 5=4
     const row2 = box2.charCodeAt(0) - 65;
     const col2 = parseInt(box2[1]) - 1;
     
-    // 檢查是否為不連通的方塊對（間隔為5格）
-    const nonConnectedPairs = [
-        ['A1', 'C1'], ['C1', 'A1'], ['A2', 'C2'], ['C2', 'A2'],
-        ['C1', 'E1'], ['E1', 'C1'], ['C2', 'E2'], ['E2', 'C2'],
-        ['B4', 'D4'], ['D4', 'B4'], ['B5', 'D5'], ['D5', 'B5'],
-        ['D4', 'F4'], ['F4', 'D4'], ['D5', 'F5'], ['F5', 'D5']
-    ];
-    
-    // 如果是不連通的方塊對，間隔為5格
-    if (nonConnectedPairs.some(pair => pair[0] === box1 && pair[1] === box2)) {
-        return 5; // 不連通的方塊對間隔為5格
+    // 檢查水平相鄰
+    if (config.rules.connections.horizontal && row1 === row2 && Math.abs(col1 - col2) === 1) {
+        return true;
     }
     
-    // 檢查是否為垂直相鄰（間隔為1格）
-    const verticalAdjacentPairs = [
-        ['A5', 'C5'], ['C5', 'A5'], ['C5', 'E5'], ['E5', 'C5'],  // 左側垂直相鄰
-        ['B1', 'D1'], ['D1', 'B1'], ['D1', 'F1'], ['F1', 'D1'],  // 右側垂直相鄰
-        ['A4', 'C4'], ['C4', 'A4'], ['C4', 'E4'], ['E4', 'C4'],  // 左側中間垂直相鄰
-        ['B2', 'D2'], ['D2', 'B2'], ['D2', 'F2'], ['F2', 'D2']   // 右側中間垂直相鄰
-    ];
-    
-    // 如果是垂直相鄰，間隔為1格
-    if (verticalAdjacentPairs.some(pair => pair[0] === box1 && pair[1] === box2)) {
-        return 1; // 垂直相鄰間隔為1格
+    // 檢查垂直相鄰
+    if (config.rules.connections.vertical && col1 === col2 && Math.abs(row1 - row2) === 1) {
+        return true;
     }
     
-    // 檢查是否為跨行垂直（間隔為3格）
-    const crossRowVerticalPairs = [
-        ['A1', 'B1'], ['B1', 'A1'], ['A2', 'B2'], ['B2', 'A2'], ['A3', 'B3'], ['B3', 'A3'], ['A4', 'B4'], ['B4', 'A4'], ['A5', 'B5'], ['B5', 'A5'],
-        ['B1', 'C1'], ['C1', 'B1'], ['B2', 'C2'], ['C2', 'B2'], ['B3', 'C3'], ['C3', 'B3'], ['B4', 'C4'], ['C4', 'B4'], ['B5', 'C5'], ['C5', 'B5'],
-        ['C1', 'D1'], ['D1', 'C1'], ['C2', 'D2'], ['D2', 'C2'], ['C3', 'D3'], ['D3', 'C3'], ['C4', 'D4'], ['D4', 'C4'], ['C5', 'D5'], ['D5', 'C5'],
-        ['D1', 'E1'], ['E1', 'D1'], ['D2', 'E2'], ['E2', 'D2'], ['D3', 'E3'], ['E3', 'D3'], ['D4', 'E4'], ['E4', 'D4'], ['D5', 'E5'], ['E5', 'D5'],
-        ['E1', 'F1'], ['F1', 'E1'], ['E2', 'F2'], ['F2', 'E2'], ['E3', 'F3'], ['F3', 'E3'], ['E4', 'F4'], ['F4', 'E4'], ['E5', 'F5'], ['F5', 'E5']
-    ];
+    return false;
+}
+
+// 計算兩個寶箱之間的間隔距離（使用新的配置規則）
+function calculateGap(box1, box2) {
+    const config = treasureAllocationConfig;
     
-    // 如果是跨行垂直，間隔為3格
-    if (crossRowVerticalPairs.some(pair => pair[0] === box1 && pair[1] === box2)) {
-        return 3; // 跨行垂直間隔為3格
+    // 檢查是否為特殊連接
+    const isSpecialConnection = config.rules.connections.special.some(pair => 
+        (pair[0] === box1 && pair[1] === box2) || (pair[0] === box2 && pair[1] === box1)
+    );
+    
+    if (isSpecialConnection) {
+        return 1; // 特殊連接距離為1
     }
     
-    // 檢查是否為禁止跨區配對的箱子（間隔為5格）
-    const forbiddenCrossZonePairs = [
-        // A行禁止跨區配對
-        ['A1', 'A3'], ['A3', 'A1'],
-        // B行禁止跨區配對
-        ['B3', 'B5'], ['B5', 'B3'],
-        // C行禁止跨區配對
-        ['C1', 'C3'], ['C3', 'C1'],
-        // D行禁止跨區配對
-        ['D3', 'D5'], ['D5', 'D3'],
-        // E行禁止跨區配對
-        ['E1', 'E3'], ['E3', 'E1'],
-        // F行禁止跨區配對
-        ['F3', 'F5'], ['F5', 'F3']
-    ];
+    const row1 = box1.charCodeAt(0) - 65; // A=0, B=1, C=2, D=3, E=4, F=5
+    const col1 = parseInt(box1[1]) - 1;   // 1=0, 2=1, 3=2, 4=3, 5=4
+    const row2 = box2.charCodeAt(0) - 65;
+    const col2 = parseInt(box2[1]) - 1;
     
-    // 如果是禁止跨區配對的箱子，間隔為5格
-    if (forbiddenCrossZonePairs.some(pair => pair[0] === box1 && pair[1] === box2)) {
-        return 5; // 禁止跨區配對，間隔為5格
+    // 檢查是否為水平相鄰
+    if (config.rules.connections.horizontal && row1 === row2 && Math.abs(col1 - col2) === 1) {
+        return 1; // 水平相鄰距離為1
+    }
+    
+    // 檢查是否為垂直相鄰
+    if (config.rules.connections.vertical && col1 === col2 && Math.abs(row1 - row2) === 1) {
+        return 1; // 垂直相鄰距離為1
     }
     
     // 計算曼哈頓距離（水平+垂直距離）
@@ -570,433 +531,437 @@ function calculateGap(box1, box2) {
     return rowDistance + colDistance;
 }
 
+// 遊戲寶箱分配指令配置
+const treasureAllocationConfig = {
+    "command": "treasure_allocation",
+    "players": 10,                  // 玩家人數 (7–18)
+    "rules": {
+        "chests": [
+            "A1","A2","A3","A4","A5",
+            "B1","B2","B3","B4","B5",
+            "C1","C2","C3","C4","C5",
+            "D1","D2","D3","D4","D5",
+            "E1","E2","E3","E4","E5",
+            "F1","F2","F3","F4","F5"
+        ],
+        "connections": {
+            "horizontal": true,
+            "vertical": true,
+            "special": [
+                ["A5","C5"], ["C5","E5"],
+                ["B1","D1"], ["D1","F1"]
+            ]
+        },
+        "allocation": {
+            "minPerPlayer": 1,
+            "maxPerPlayer": 5,
+            "avgDistribution": true,      // 確保平均
+            "maxStepDistance": 3          // 每人區塊 3 步內可完成
+        }
+    },
+    "output": "mapping"              // 輸出結果格式 {player: [chests]}
+};
+
+// 精確的寶箱分配方案 - 按照您提供的規則
+const preciseAllocationPatterns = {
+    6: [
+        { player: "P1", boxes: ["A1", "A2", "A3", "A4", "A5"] },
+        { player: "P2", boxes: ["B1", "B2", "B3", "B4", "B5"] },
+        { player: "P3", boxes: ["C1", "C2", "C3", "C4", "C5"] },
+        { player: "P4", boxes: ["D1", "D2", "D3", "D4", "D5"] },
+        { player: "P5", boxes: ["E1", "E2", "E3", "E4", "E5"] },
+        { player: "P6", boxes: ["F1", "F2", "F3", "F4", "F5"] }
+    ],
+    7: [
+        { player: "P1", boxes: ["A1", "A2", "A3", "A4", "A5"] },
+        { player: "P2", boxes: ["B1", "B2", "B3", "B4", "B5"] },
+        { player: "P3", boxes: ["C1", "C2", "C3", "C4"] },
+        { player: "P4", boxes: ["D2", "D3", "D4", "D5"] },
+        { player: "P5", boxes: ["C5", "D1", "E5", "F1"] },
+        { player: "P6", boxes: ["E1", "E2", "E3", "E4"] },
+        { player: "P7", boxes: ["F2", "F3", "F4", "F5"] }
+    ],
+    8: [
+        { player: "P1", boxes: ["A1", "A2", "A3", "A4"] },
+        { player: "P2", boxes: ["B2", "B3", "B4", "B5"] },
+        { player: "P3", boxes: ["C1", "C2", "C3", "C4"] },
+        { player: "P4", boxes: ["D2", "D3", "D4", "D5"] },
+        { player: "P5", boxes: ["F2", "F3", "F4", "F5"] },
+        { player: "P6", boxes: ["E1", "E2", "E3", "E4"] },
+        { player: "P7", boxes: ["A5", "C5", "E5"] },
+        { player: "P8", boxes: ["B1", "D1", "F1"] }
+    ],
+    9: [
+        { player: "P1", boxes: ["A1", "A2", "A3"] },
+        { player: "P2", boxes: ["B5", "B4", "B3"] },
+        { player: "P3", boxes: ["C1", "C2", "C3"] },
+        { player: "P4", boxes: ["D3", "D4", "D5"] },
+        { player: "P5", boxes: ["E1", "E2", "E3"] },
+        { player: "P6", boxes: ["F3", "F4", "F5"] },
+        { player: "P7", boxes: ["A4", "A5", "B1", "B2"] },
+        { player: "P8", boxes: ["C4", "C5", "D1", "D2"] },
+        { player: "P9", boxes: ["E4", "E5", "F1", "F2"] }
+    ],
+    10: [
+        { player: "P1", boxes: ["A1", "A2", "A3"] },
+        { player: "P2", boxes: ["A5", "B2", "B1"] },
+        { player: "P3", boxes: ["B3", "B4", "B5"] },
+        { player: "P4", boxes: ["A4", "C4", "C5"] },
+        { player: "P5", boxes: ["D3", "D4", "D5"] },
+        { player: "P6", boxes: ["D1", "D2", "F2"] },
+        { player: "P7", boxes: ["E1", "E2", "E3"] },
+        { player: "P8", boxes: ["E4", "E5", "F1"] },
+        { player: "P9", boxes: ["F3", "F4", "F5"] },
+        { player: "P10", boxes: ["C1", "C2", "C3"] }
+    ],
+    11: [
+        { player: "P1", boxes: ["A1", "A2", "A3"] },
+        { player: "P2", boxes: ["A4", "A5"] },
+        { player: "P3", boxes: ["B5", "B3", "B4"] },
+        { player: "P4", boxes: ["B1", "B2"] },
+        { player: "P5", boxes: ["C1", "C2", "C3"] },
+        { player: "P6", boxes: ["D3", "D4", "D5"] },
+        { player: "P7", boxes: ["D1", "D2", "C4"] },
+        { player: "P8", boxes: ["C5", "E5"] },
+        { player: "P9", boxes: ["E1", "E2", "E3"] },
+        { player: "P10", boxes: ["E4", "F1", "F2"] },
+        { player: "P11", boxes: ["F5", "F4", "F3"] }
+    ],
+    12: [
+        { player: "P1", boxes: ["A1", "A2", "A3"] },
+        { player: "P2", boxes: ["A4", "A5"] },
+        { player: "P3", boxes: ["B5", "B3", "B4"] },
+        { player: "P4", boxes: ["B1", "B2"] },
+        { player: "P5", boxes: ["C1", "C2", "C3"] },
+        { player: "P6", boxes: ["C4", "C5"] },
+        { player: "P7", boxes: ["D3", "D4", "D5"] },
+        { player: "P8", boxes: ["D1", "D2"] },
+        { player: "P9", boxes: ["E1", "E2", "E3"] },
+        { player: "P10", boxes: ["E4", "E5"] },
+        { player: "P11", boxes: ["F1", "F2"] },
+        { player: "P12", boxes: ["F4", "F5", "F3"] }
+    ],
+    13: [
+        { player: "P1", boxes: ["A1", "A2"] },
+        { player: "P2", boxes: ["A3", "A4"] },
+        { player: "P3", boxes: ["A5", "B1"] },
+        { player: "P4", boxes: ["B2", "B3"] },
+        { player: "P5", boxes: ["B4", "B5"] },
+        { player: "P6", boxes: ["C1", "C2", "C3"] },
+        { player: "P7", boxes: ["C4", "C5"] },
+        { player: "P8", boxes: ["D1", "D2"] },
+        { player: "P9", boxes: ["D3", "D4", "D5"] },
+        { player: "P10", boxes: ["E1", "E2", "E3"] },
+        { player: "P11", boxes: ["E5", "E4"] },
+        { player: "P12", boxes: ["F1", "F2"] },
+        { player: "P13", boxes: ["F4", "F5", "F3"] }
+    ],
+    14: [
+        { player: "P1", boxes: ["A1", "A2", "A3"] },
+        { player: "P2", boxes: ["A4", "A5"] },
+        { player: "P3", boxes: ["B5", "B3", "B4"] },
+        { player: "P4", boxes: ["B1", "B2"] },
+        { player: "P5", boxes: ["C1", "C2"] },
+        { player: "P6", boxes: ["C3", "C4"] },
+        { player: "P7", boxes: ["C5", "D1"] },
+        { player: "P8", boxes: ["D3", "D2"] },
+        { player: "P9", boxes: ["D5", "D4"] },
+        { player: "P10", boxes: ["E1", "E2"] },
+        { player: "P11", boxes: ["E4", "E3"] },
+        { player: "P12", boxes: ["E5", "F1"] },
+        { player: "P13", boxes: ["F3", "F2"] },
+        { player: "P14", boxes: ["F5", "F4"] }
+    ],
+    15: [
+        { player: "P1", boxes: ["A1", "A2"] },
+        { player: "P2", boxes: ["A3", "A4"] },
+        { player: "P3", boxes: ["A5", "B1"] },
+        { player: "P4", boxes: ["B2", "B3"] },
+        { player: "P5", boxes: ["B4", "B5"] },
+        { player: "P6", boxes: ["C1", "C2"] },
+        { player: "P7", boxes: ["C3", "C4"] },
+        { player: "P8", boxes: ["C5", "D1"] },
+        { player: "P9", boxes: ["D2", "D3"] },
+        { player: "P10", boxes: ["D4", "D5"] },
+        { player: "P11", boxes: ["E1", "E2"] },
+        { player: "P12", boxes: ["E3", "E4"] },
+        { player: "P13", boxes: ["E5", "F1"] },
+        { player: "P14", boxes: ["F2", "F3"] },
+        { player: "P15", boxes: ["F4", "F5"] }
+    ],
+    16: [
+        { player: "P1", boxes: ["A1", "A2"] },
+        { player: "P2", boxes: ["A3", "A4"] },
+        { player: "P3", boxes: ["A5", "B1"] },
+        { player: "P4", boxes: ["B2", "B3"] },
+        { player: "P5", boxes: ["B4", "B5"] },
+        { player: "P6", boxes: ["C1", "C2"] },
+        { player: "P7", boxes: ["C3", "C4"] },
+        { player: "P8", boxes: ["C5", "D1"] },
+        { player: "P9", boxes: ["D2", "D3"] },
+        { player: "P10", boxes: ["D4", "D5"] },
+        { player: "P11", boxes: ["E1", "E2"] },
+        { player: "P12", boxes: ["E3", "E4"] },
+        { player: "P13", boxes: ["E5", "F1"] },
+        { player: "P14", boxes: ["F2", "F3"] },
+        { player: "P15", boxes: ["F4"] },
+        { player: "P16", boxes: ["F5"] }
+    ],
+    17: [
+        { player: "P1", boxes: ["A1", "A2"] },
+        { player: "P2", boxes: ["A3", "A4"] },
+        { player: "P3", boxes: ["A5", "B1"] },
+        { player: "P4", boxes: ["B2", "B3"] },
+        { player: "P5", boxes: ["B4", "B5"] },
+        { player: "P6", boxes: ["C1", "C2"] },
+        { player: "P7", boxes: ["C3", "C4"] },
+        { player: "P8", boxes: ["C5", "D1"] },
+        { player: "P9", boxes: ["D2", "D3"] },
+        { player: "P10", boxes: ["D4", "D5"] },
+        { player: "P11", boxes: ["E1", "E2"] },
+        { player: "P12", boxes: ["E3", "E4"] },
+        { player: "P13", boxes: ["E5", "F1"] },
+        { player: "P14", boxes: ["F2"] },
+        { player: "P15", boxes: ["F3"] },
+        { player: "P16", boxes: ["F4"] },
+        { player: "P17", boxes: ["F5"] }
+    ],
+    18: [
+        { player: "P1", boxes: ["A1", "A2"] },
+        { player: "P2", boxes: ["A3", "A4"] },
+        { player: "P3", boxes: ["A5", "B1"] },
+        { player: "P4", boxes: ["B2", "B3"] },
+        { player: "P5", boxes: ["B4", "B5"] },
+        { player: "P6", boxes: ["C1", "C2"] },
+        { player: "P7", boxes: ["C3", "C4"] },
+        { player: "P8", boxes: ["C5", "D1"] },
+        { player: "P9", boxes: ["D2", "D3"] },
+        { player: "P10", boxes: ["D4", "D5"] },
+        { player: "P11", boxes: ["E1", "E2"] },
+        { player: "P12", boxes: ["E3", "E4"] },
+        { player: "P13", boxes: ["E5"] },
+        { player: "P14", boxes: ["F4"] },
+        { player: "P15", boxes: ["F5"] },
+        { player: "P16", boxes: ["F1"] },
+        { player: "P17", boxes: ["F2"] },
+        { player: "P18", boxes: ["F3"] }
+    ]
+};
+
 function splitBon() {
     clearBon();
     
-    // 计算每个玩家应该获得的箱子数量
-    const totalBoxes = 30;
     const eligiblePlayers = getEligibleBonPlayers();
     
     if (eligiblePlayers.length === 0) {
-        console.log('没有可用的玩家进行分配');
+        console.log('沒有可用的玩家進行分配');
         return;
     }
     
-    // 随机打乱玩家顺序
+    if (eligiblePlayers.length < 6 || eligiblePlayers.length > 18) {
+        alert(`玩家人數必須在6-18人之間，目前有 ${eligiblePlayers.length} 人`);
+        return;
+    }
+    
+    console.log(`✅ 找到 ${eligiblePlayers.length} 個符合條件的玩家`);
+    
+    // 隨機打亂玩家順序
     const shuffledPlayers = [...eligiblePlayers];
     for (let i = shuffledPlayers.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffledPlayers[i], shuffledPlayers[j]] = [shuffledPlayers[j], shuffledPlayers[i]];
     }
     
-    // 计算每个玩家的宝箱数量（2或3个）
+    // 獲取精確的分配模式
+    const pattern = preciseAllocationPatterns[eligiblePlayers.length];
+    if (!pattern) {
+        console.log('沒有找到對應的分配模式');
+        return;
+    }
+    
+    // 按照精確模式分配寶箱
+    pattern.forEach((allocation, index) => {
+        if (index < shuffledPlayers.length) {
+            const playerName = shuffledPlayers[index];
+            allocation.boxes.forEach(boxId => {
+                assignLoot(boxId, playerName);
+            });
+        }
+    });
+    
+    console.log(`✅ 精確分配完成：${eligiblePlayers.length} 個玩家`);
+    console.log('分配結果：', shuffledPlayers.map((player, index) => 
+        `${player}: ${pattern[index].boxes.join(', ')}`
+    ));
+}
+
+// 測試新的寶箱分配系統
+function testTreasureAllocation() {
+    console.log('🧪 開始測試新的寶箱分配系統...');
+    
+    // 測試配置
+    const config = treasureAllocationConfig;
+    console.log('📋 配置信息:', config);
+    
+    // 測試相鄰關係
+    console.log('🔗 測試相鄰關係:');
+    console.log('A1 和 A2 相鄰:', isAdjacentBoxes('A1', 'A2')); // 應該為 true
+    console.log('A1 和 B1 相鄰:', isAdjacentBoxes('A1', 'B1')); // 應該為 true
+    console.log('A5 和 C5 相鄰:', isAdjacentBoxes('A5', 'C5')); // 應該為 true (特殊連接)
+    console.log('B1 和 D1 相鄰:', isAdjacentBoxes('B1', 'D1')); // 應該為 true (特殊連接)
+    console.log('A1 和 C1 相鄰:', isAdjacentBoxes('A1', 'C1')); // 應該為 false
+    console.log('A1 和 F5 相鄰:', isAdjacentBoxes('A1', 'F5')); // 應該為 false
+    
+    // 測試距離計算
+    console.log('📏 測試距離計算:');
+    console.log('A1 和 A2 距離:', calculateGap('A1', 'A2')); // 應該為 1
+    console.log('A1 和 B1 距離:', calculateGap('A1', 'B1')); // 應該為 1
+    console.log('A5 和 C5 距離:', calculateGap('A5', 'C5')); // 應該為 1 (特殊連接)
+    console.log('A1 和 C1 距離:', calculateGap('A1', 'C1')); // 應該為 2
+    console.log('A1 和 F5 距離:', calculateGap('A1', 'F5')); // 應該為 9
+    
+    // 測試寶箱組合生成
+    console.log('🎲 測試寶箱組合生成:');
+    const twoBoxCombos = generateBoxCombinations(2);
+    console.log('2寶箱組合數量:', twoBoxCombos.length);
+    console.log('前5個2寶箱組合:', twoBoxCombos.slice(0, 5));
+    
+    const threeBoxCombos = generateBoxCombinations(3);
+    console.log('3寶箱組合數量:', threeBoxCombos.length);
+    console.log('前5個3寶箱組合:', threeBoxCombos.slice(0, 5));
+    
+    console.log('✅ 測試完成！');
+}
+
+// 調試Split Bon的輔助函數
+function debugSplitBon() {
+    console.log('🔧 開始調試Split Bon...');
+    
+    // 檢查玩家資格
+    const eligiblePlayers = getEligibleBonPlayers();
+    console.log('🎯 符合條件的玩家:', eligiblePlayers);
+    
+    if (eligiblePlayers.length === 0) {
+        console.log('❌ 沒有符合條件的玩家！');
+        console.log('💡 請確保：');
+        console.log('   1. 填寫了玩家名稱');
+        console.log('   2. 選擇了BON獎勵');
+        return;
+    }
+    
+    // 檢查配置
+    const config = treasureAllocationConfig;
+    console.log('📋 配置信息:', config);
+    
+    // 檢查寶箱數量
+    const totalBoxes = config.rules.chests.length;
+    console.log('📦 總寶箱數:', totalBoxes);
+    
+    // 計算分配
     const baseBoxesPerPlayer = Math.floor(totalBoxes / eligiblePlayers.length);
     const remainingBoxes = totalBoxes % eligiblePlayers.length;
+    console.log('📊 基礎分配:', baseBoxesPerPlayer, '個/人');
+    console.log('📊 剩餘寶箱:', remainingBoxes, '個');
     
-    // 创建玩家分配列表
-    const playerAssignments = [];
-    shuffledPlayers.forEach((player, index) => {
-        const boxesToAssign = baseBoxesPerPlayer + (index < remainingBoxes ? 1 : 0);
-        playerAssignments.push({
-            player: player,
-            boxes: [],
-            targetCount: boxesToAssign
-        });
-    });
+    console.log('✅ 調試完成！如果以上信息都正常，Split Bon應該可以工作。');
+}
+
+// 生成寶箱組合的輔助函數（用於測試）
+function generateBoxCombinations(count) {
+    const config = treasureAllocationConfig;
+    const allBoxIds = config.rules.chests;
+    const combinations = [];
     
-    console.log('玩家分配顺序（随机后）：', shuffledPlayers);
-    console.log('宝箱分配数量：', playerAssignments.map(p => `${p.player}: ${p.targetCount}个`));
-    
-    // 定义所有可能的宝箱组合
-    const allBoxIds = ['A1', 'A2', 'A3', 'A4', 'A5', 'B1', 'B2', 'B3', 'B4', 'B5',
-                       'C1', 'C2', 'C3', 'C4', 'C5', 'D1', 'D2', 'D3', 'D4', 'D5',
-                       'E1', 'E2', 'E3', 'E4', 'E5', 'F1', 'F2', 'F3', 'F4', 'F5'];
-    
-    // 检查是否为10人且全部3宝箱的特殊情况
-    const isSpecialCase = eligiblePlayers.length === 10 && playerAssignments.every(p => p.targetCount === 3);
-    
-    // 检查是否为15人且全部2宝箱的特殊情况
-    const isFifteenPlayerCase = eligiblePlayers.length === 15 && playerAssignments.every(p => p.targetCount === 2);
-    
-    if (isSpecialCase) {
-        console.log('检测到特殊情况：10人且全部3宝箱，使用特殊组合规则');
+    // 定義相鄰關係
+    const getAdjacentBoxes = (boxId) => {
+        const adjacent = [];
+        const row = boxId.charCodeAt(0) - 65; // A=0, B=1, C=2, D=3, E=4, F=5
+        const col = parseInt(boxId[1]) - 1;   // 1=0, 2=1, 3=2, 4=3, 5=4
         
-        // 特殊规则：10人且全部3宝箱时的特定组合
-        const specialTenPlayerGroups = [
-            ['A4', 'A5', 'C4'],  // 左上方组合
-            ['C5', 'E5', 'E4'],  // 左下方组合
-            ['B1', 'B2', 'D1'],  // 右上方组合
-            ['D2', 'F1', 'F2'],  // 右下方组合
-            ['A1', 'A2', 'A3'],  // 左边界 A123
-            ['C1', 'C2', 'C3'],  // 左边界 C123  
-            ['E1', 'E2', 'E3'],  // 左边界 E123
-            ['B3', 'B4', 'B5'],  // 右边界 B345
-            ['D3', 'D4', 'D5'],  // 右边界 D345
-            ['F3', 'F4', 'F5']   // 右边界 F345
-        ];
-        
-        // 随机打乱特殊组合顺序
-        const shuffledSpecialGroups = [...specialTenPlayerGroups];
-        for (let i = shuffledSpecialGroups.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffledSpecialGroups[i], shuffledSpecialGroups[j]] = [shuffledSpecialGroups[j], shuffledSpecialGroups[i]];
+        // 水平相鄰
+        if (config.rules.connections.horizontal) {
+            if (col > 0) adjacent.push(String.fromCharCode(65 + row) + (col));
+            if (col < 4) adjacent.push(String.fromCharCode(65 + row) + (col + 2));
         }
         
-        // 随机打乱玩家顺序
-        const shuffledThreeBoxPlayers = [...playerAssignments];
-        for (let i = shuffledThreeBoxPlayers.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffledThreeBoxPlayers[i], shuffledThreeBoxPlayers[j]] = [shuffledThreeBoxPlayers[j], shuffledThreeBoxPlayers[i]];
+        // 垂直相鄰
+        if (config.rules.connections.vertical) {
+            if (row > 0) adjacent.push(String.fromCharCode(64 + row) + (col + 1));
+            if (row < 5) adjacent.push(String.fromCharCode(66 + row) + (col + 1));
         }
         
-        // 为每个玩家分配特殊组合
-        shuffledThreeBoxPlayers.forEach((player, index) => {
-            if (index < shuffledSpecialGroups.length) {
-                const group = shuffledSpecialGroups[index];
-                group.forEach(boxId => {
-                    player.boxes.push(boxId);
-                    assignLoot(boxId, player.player);
-                });
-            }
+        // 特殊連接
+        config.rules.connections.special.forEach(pair => {
+            if (pair[0] === boxId) adjacent.push(pair[1]);
+            if (pair[1] === boxId) adjacent.push(pair[0]);
         });
         
-        console.log('特殊规则分配完成！');
-        return;
-    }
-    
-    if (isFifteenPlayerCase) {
-        console.log('检测到特殊情况：15人且全部2宝箱，使用特殊组合规则');
-        
-        // 特殊规则：15人且全部2宝箱时的组合规则
-        // 按照新规则：a1 a2一組 a3 a4一組 a5 b1一組
-        const specialFifteenPlayerGroups = [
-            ['A1', 'A2'],  // A1-A2组合
-            ['A3', 'A4'],  // A3-A4组合
-            ['A5', 'B1'],  // A5-B1组合
-            ['B2', 'B3'],  // B2-B3组合
-            ['B4', 'B5'],  // B4-B5组合
-            ['C1', 'C2'],  // C1-C2组合
-            ['C3', 'C4'],  // C3-C4组合
-            ['C5', 'D1'],  // C5-D1组合
-            ['D2', 'D3'],  // D2-D3组合
-            ['D4', 'D5'],  // D4-D5组合
-            ['E1', 'E2'],  // E1-E2组合
-            ['E3', 'E4'],  // E3-E4组合
-            ['E5', 'F1'],  // E5-F1组合
-            ['F2', 'F3'],  // F2-F3组合
-            ['F4', 'F5']   // F4-F5组合
-        ];
-        
-        // 随机打乱特殊组合顺序
-        const shuffledFifteenGroups = [...specialFifteenPlayerGroups];
-        for (let i = shuffledFifteenGroups.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffledFifteenGroups[i], shuffledFifteenGroups[j]] = [shuffledFifteenGroups[j], shuffledFifteenGroups[i]];
-        }
-        
-        // 随机打乱玩家顺序
-        const shuffledTwoBoxPlayers = [...playerAssignments];
-        for (let i = shuffledTwoBoxPlayers.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffledTwoBoxPlayers[i], shuffledTwoBoxPlayers[j]] = [shuffledTwoBoxPlayers[j], shuffledTwoBoxPlayers[i]];
-        }
-        
-        // 为每个玩家分配特殊组合
-        shuffledTwoBoxPlayers.forEach((player, index) => {
-            if (index < shuffledFifteenGroups.length) {
-                const group = shuffledFifteenGroups[index];
-                group.forEach(boxId => {
-                    player.boxes.push(boxId);
-                    assignLoot(boxId, player.player);
-                });
-            }
-        });
-        
-        console.log('15人2宝箱特殊规则分配完成！');
-        return;
-    }
-    
-    // 常规分配逻辑（非特殊人数情况）
-    
-    // 定义3宝箱的优先边界组合（第一优先级）
-    const priorityThreeBoxGroups = [
-        ['A1', 'A2', 'A3'],  // 左边界 A123
-        ['C1', 'C2', 'C3'],  // 左边界 C123  
-        ['E1', 'E2', 'E3'],  // 左边界 E123
-        ['B3', 'B4', 'B5'],  // 右边界 B345
-        ['D3', 'D4', 'D5'],  // 右边界 D345
-        ['F3', 'F4', 'F5']   // 右边界 F345
-    ];
-    
-    // 定义3宝箱的备用水平相邻组合（第二优先级）
-    const fallbackThreeBoxGroups = [
-        ['A2', 'A3', 'A4'], ['A3', 'A4', 'A5'],
-        ['B1', 'B2', 'B3'], ['B2', 'B3', 'B4'],
-        ['C2', 'C3', 'C4'], ['C3', 'C4', 'C5'],
-        ['D1', 'D2', 'D3'], ['D2', 'D3', 'D4'],
-        ['E2', 'E3', 'E4'], ['E3', 'E4', 'E5'],
-        ['F1', 'F2', 'F3'], ['F2', 'F3', 'F4']
-    ];
-    
-    // 定义2宝箱的相邻组合（遵循特定规则）
-    const twoBoxGroups = [
-        // 第一优先级：水平相邻（遵循边界相邻限制）
-        ['A2', 'A3'], ['A3', 'A4'], ['A4', 'A5'],  // A1只跟A2相邻，A5只跟A4相邻
-        ['B1', 'B2'], ['B2', 'B3'], ['B3', 'B4'],  // B5只跟B4相邻
-        ['C2', 'C3'], ['C3', 'C4'], ['C4', 'C5'],  // C1只跟C2相邻
-        ['D1', 'D2'], ['D2', 'D3'], ['D3', 'D4'],  // D5只跟D4相邻
-        ['E2', 'E3'], ['E3', 'E4'], ['E4', 'E5'],  // E1只跟E2相邻
-        ['F1', 'F2'], ['F2', 'F3'], ['F3', 'F4'],  // F5只跟F4相邻
-        
-        // 第二优先级：垂直相邻（遵循特定规则）
-        ['A5', 'B1'], ['A5', 'C5'],  // A5跟B1,C5相邻
-        ['B1', 'D1'],                 // B1也跟D1相邻
-        ['C5', 'E5'],                 // C5也跟E5相邻
-        ['D1', 'F1'],                 // D1也跟F1相邻
-        ['E5', 'F1'],                 // E5也跟F1相邻
-        
-        // 第三优先级：跨行相邻（间隔为3）
-        ['A2', 'B2'], ['B2', 'C2'], ['C2', 'D2'], ['D2', 'E2'], ['E2', 'F2'],
-        ['A3', 'B3'], ['B3', 'C3'], ['C3', 'D3'], ['D3', 'E3'], ['E3', 'F3'],
-        ['A4', 'B4'], ['B4', 'C4'], ['C4', 'D4'], ['D4', 'E4'], ['E4', 'F4']
-    ];
-    
-    // 随机打乱组合顺序，增加随机性
-    const shuffleArray = (array) => {
-        const shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled;
+        return adjacent.filter(box => allBoxIds.includes(box));
     };
     
-    const shuffledPriorityGroups = shuffleArray(priorityThreeBoxGroups);
-    const shuffledFallbackGroups = shuffleArray(fallbackThreeBoxGroups);
-    const shuffledTwoBoxGroups = shuffleArray(twoBoxGroups);
-    
-    // 第一阶段：优先分配3宝箱玩家（优先边界组合）
-    const threeBoxPlayers = playerAssignments.filter(p => p.targetCount === 3);
-    const shuffledThreeBoxPlayers = shuffleArray(threeBoxPlayers);
-    
-    shuffledThreeBoxPlayers.forEach(player => {
-        // 优先分配边界组合
-        let assigned = false;
-        for (let group of shuffledPriorityGroups) {
-            if (group.every(boxId => !lootAssignments[boxId])) {
-                // 分配这组边界宝箱
-                group.forEach(boxId => {
-                    player.boxes.push(boxId);
-                    assignLoot(boxId, player.player);
-                });
-                assigned = true;
-                break;
-            }
-        }
-        
-        // 如果没有找到可用的边界组合，使用备用组合
-        if (!assigned) {
-            for (let group of shuffledFallbackGroups) {
-                if (group.every(boxId => !lootAssignments[boxId])) {
-                    group.forEach(boxId => {
-                        player.boxes.push(boxId);
-                        assignLoot(boxId, player.player);
-                    });
-                    break;
-                }
-            }
-        }
-        
-        // 如果还是没有找到，分配任何可用的3个相邻宝箱
-        if (player.boxes.length === 0) {
-            let boxesAssigned = 0;
-            for (let boxId of allBoxIds) {
-                if (!lootAssignments[boxId] && boxesAssigned < 3) {
-                    player.boxes.push(boxId);
-                    assignLoot(boxId, player.player);
-                    boxesAssigned++;
-                }
-            }
-        }
-    });
-    
-    // 第二阶段：分配2宝箱玩家
-    const twoBoxPlayers = playerAssignments.filter(p => p.targetCount === 2);
-    const shuffledTwoBoxPlayers = shuffleArray(twoBoxPlayers);
-    
-    shuffledTwoBoxPlayers.forEach(player => {
-        // 找到可用的2宝箱相邻组合
-        let assigned = false;
-        for (let group of shuffledTwoBoxGroups) {
-            if (group.every(boxId => !lootAssignments[boxId])) {
-                // 分配这组宝箱
-                group.forEach(boxId => {
-                    player.boxes.push(boxId);
-                    assignLoot(boxId, player.player);
-                });
-                assigned = true;
-                break;
-            }
-        }
-        
-        // 如果没有找到可用的2宝箱组合，分配任何可用的2个宝箱
-        if (!assigned) {
-            let boxesAssigned = 0;
-            for (let boxId of allBoxIds) {
-                if (!lootAssignments[boxId] && boxesAssigned < 2) {
-                    player.boxes.push(boxId);
-                    assignLoot(boxId, player.player);
-                    boxesAssigned++;
-                }
-            }
-        }
-    });
-    
-    // 第三阶段：确保所有宝箱都被分配
-    allBoxIds.forEach(boxId => {
-        if (!lootAssignments[boxId]) {
-            // 找到有空间的玩家
-            let availablePlayer = playerAssignments.find(p => p.boxes.length < p.targetCount);
-            
-            if (availablePlayer) {
-                availablePlayer.boxes.push(boxId);
-                assignLoot(boxId, availablePlayer.player);
-            }
-        }
-    });
-    
-    // 最终检查和优化
-    let maxAttempts = 5;
-    let attempt = 0;
-    
-    while (attempt < maxAttempts) {
-        let needsOptimization = false;
-        
-        // 检查每个玩家的宝箱间隔
-        for (const player of playerAssignments) {
-            if (player.boxes.length <= 1) continue;
-            
-            // 对宝箱进行排序
-            const sortedBoxes = [...player.boxes].sort();
-            
-            // 检查间隔
-            for (let i = 0; i < sortedBoxes.length - 1; i++) {
-                const gap = calculateGap(sortedBoxes[i], sortedBoxes[i + 1]);
-                if (gap > 3) {
-                    needsOptimization = true;
-                    console.log(`玩家 ${player.player} 的宝箱 ${sortedBoxes[i]} 和 ${sortedBoxes[i + 1]} 间隔为 ${gap}，需要优化`);
-                    break;
-                }
-            }
-            if (needsOptimization) break;
-        }
-        
-        if (!needsOptimization) {
-            console.log('所有玩家的宝箱间隔都在3格以内，分配完成！');
-            break;
-        }
-        
-        // 尝试优化：重新分配间隔过大的宝箱
-        console.log(`第 ${attempt + 1} 次优化...`);
-        attempt++;
-        
-        // 找到间隔过大的玩家，尝试重新分配
-        for (const player of playerAssignments) {
-            if (player.boxes.length <= 1) continue;
-            
-            const sortedBoxes = [...player.boxes].sort();
-            let hasLargeGap = false;
-            
-            for (let i = 0; i < sortedBoxes.length - 1; i++) {
-                const gap = calculateGap(sortedBoxes[i], sortedBoxes[i + 1]);
-                if (gap > 3) {
-                    hasLargeGap = true;
-                    break;
-                }
-            }
-            
-            if (hasLargeGap) {
-                // 尝试找到更好的相邻宝箱组合
-                const currentBoxes = [...player.boxes];
-                player.boxes = [];
-                
-                // 清空当前分配
-                currentBoxes.forEach(boxId => {
-                    clearLoot(boxId);
-                });
-                
-                // 重新分配，优先选择相邻的宝箱
-                if (player.targetCount === 3) {
-                    // 优先寻找边界组合
-                    for (let group of shuffledPriorityGroups) {
-                        if (group.every(boxId => !lootAssignments[boxId])) {
-                            group.forEach(boxId => {
-                                player.boxes.push(boxId);
-                                assignLoot(boxId, player.player);
-                            });
-                            break;
-                        }
-                    }
-                    
-                    // 如果没有边界组合，寻找备用组合
-                    if (player.boxes.length === 0) {
-                        for (let group of shuffledFallbackGroups) {
-                            if (group.every(boxId => !lootAssignments[boxId])) {
-                                group.forEach(boxId => {
-                                    player.boxes.push(boxId);
-                                    assignLoot(boxId, player.player);
-                                });
-                                break;
-                            }
-                        }
-                    }
-                } else if (player.targetCount === 2) {
-                    // 寻找2个相邻的宝箱
-                    for (let group of shuffledTwoBoxGroups) {
-                        if (group.every(boxId => !lootAssignments[boxId])) {
-                            group.forEach(boxId => {
-                                player.boxes.push(boxId);
-                                assignLoot(boxId, player.player);
-                            });
-                            break;
-                        }
-                    }
-                }
-                
-                // 如果重新分配失败，恢复原来的分配
-                if (player.boxes.length === 0) {
-                    currentBoxes.forEach(boxId => {
-                        player.boxes.push(boxId);
-                        assignLoot(boxId, player.player);
-                    });
-                }
-            }
-        }
+    if (count === 1) {
+        return allBoxIds.map(box => [box]);
     }
     
-    // 最终检查
-    const finalAssignedBoxes = Object.keys(lootAssignments).length;
-    console.log(`最终分配完成：${finalAssignedBoxes}/30 个宝箱已分配`);
+    if (count === 2) {
+        allBoxIds.forEach(box1 => {
+            const adjacent = getAdjacentBoxes(box1);
+            adjacent.forEach(box2 => {
+                if (box1 < box2) { // 避免重複
+                    combinations.push([box1, box2]);
+                }
+            });
+        });
+        return combinations;
+    }
     
-    // 输出每个玩家的最终分配结果
-    playerAssignments.forEach(player => {
-        console.log(`${player.player}: ${player.boxes.join(', ')}`);
-    });
+    if (count === 3) {
+        allBoxIds.forEach(box1 => {
+            const adjacent1 = getAdjacentBoxes(box1);
+            adjacent1.forEach(box2 => {
+                const adjacent2 = getAdjacentBoxes(box2);
+                adjacent2.forEach(box3 => {
+                    if (box1 !== box3 && box2 !== box3) {
+                        // 檢查三個寶箱是否形成連通區域
+                        const boxes = [box1, box2, box3].sort();
+                        const key = boxes.join(',');
+                        if (!combinations.some(combo => combo.sort().join(',') === key)) {
+                            combinations.push(boxes);
+                        }
+                    }
+                });
+            });
+        });
+        return combinations;
+    }
     
-    console.log('Bon分配完成！');
+    return combinations;
 }
 
 function pickLuckyWinner() {
     const idPlayers = [];
-    document.querySelectorAll('.player-name').forEach(input => {
-        const name = input.value.trim();
-        if (name) {
-            idPlayers.push(name);
+    document.querySelectorAll('.member-input').forEach(member => {
+        const nameInput = member.querySelector('.player-name');
+        const jobSelect = member.querySelector('.job-select');
+        const lootSelect = member.querySelector('.loot-select');
+        
+        // 檢查是否填寫了ID、Job、Reward且不是trainee
+        if (nameInput && nameInput.tagName === 'INPUT' && nameInput.value.trim()) {
+            const name = nameInput.value.trim();
+            const job = jobSelect && jobSelect.tagName === 'SELECT' ? jobSelect.value : '';
+            const loot = lootSelect && lootSelect.tagName === 'SELECT' ? lootSelect.value : '';
+            
+            // 只有同時填寫ID、Job、Reward且不是trainee的玩家才加入候選名單
+            if (name && job && loot && loot !== 'trainee') {
+                idPlayers.push(name);
+            }
         }
     });
     
+    console.log('🎲 Lucky Winner 候選名單:', idPlayers);
+    
     if (idPlayers.length === 0) {
-        alert('No IDs available to select!');
+        alert('沒有符合條件的玩家可以選擇！\n需要同時填寫ID、Job、Reward且不是trainee');
         return;
     }
     
@@ -1722,6 +1687,7 @@ function assignLootWithColor(boxId, playerName, backgroundColor, borderColor) {
         }
     }
 }
+
 
 // 在頁面載入時初始化拖拽功能
 document.addEventListener('DOMContentLoaded', function() {

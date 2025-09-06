@@ -1324,3 +1324,74 @@ header p {
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
+
+/* Bon Split Content */
+.bon-split-content {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+}
+
+.grid-container {
+    flex: 1;
+}
+
+.player-count-info {
+    background: linear-gradient(45deg, #4299e1, #3182ce);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+    white-space: nowrap;
+    height: fit-content;
+    margin-top: 0;
+    align-self: flex-start;
+}
+
+.count-label {
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .bon-split-content {
+        flex-direction: column;
+        gap: 15px;
+        align-items: center;
+    }
+    
+    .player-count-info {
+        margin-top: 0;
+        order: -1;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 10px;
+    }
+    
+    .modal-header {
+        padding: 15px 20px;
+    }
+    
+    .modal-body {
+        padding: 20px;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .modal-actions button {
+        width: 100%;
+        max-width: 200px;
+    }
+    
+    .preview-grid {
+        grid-template-columns: 1fr;
+    }
+}
